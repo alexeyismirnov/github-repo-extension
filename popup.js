@@ -11,7 +11,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   
   let currentToken = null;
   
-  // Check if token exists
+  // Cache configuration
+  const CACHE_KEY = 'github_repos_cache';
+  const CACHE_TIMESTAMP_KEY = 'github_repos_cache_timestamp';
+  
+  // Check if token exists and load data
   await loadToken();
   
   async function loadToken() {
@@ -22,7 +26,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       showSetup();
     } else {
       showMain();
-      loadRepositories(currentToken);
+      // Try to load from cache first, then fetch if needed
+      await loadRepositoriesWithCache(currentToken, false);
     }
   }
   
@@ -42,15 +47,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (token) {
       await chrome.storage.local.set({ githubToken: token });
       currentToken = token;
+      
+      // Clear cache when token changes (different user might have different repos)
+      clearCache();
+      
       showMain();
-      loadRepositories(token);
+      await loadRepositoriesWithCache(token, true); // Force fresh fetch for new token
     }
   });
   
-  // Refresh button
-  refreshBtn.addEventListener('click', function() {
+  // Refresh button - always fetch fresh data
+  refreshBtn.addEventListener('click', async function() {
     if (currentToken) {
-      loadRepositories(currentToken);
+      await loadRepositoriesWithCache(currentToken, true);
     }
   });
   
@@ -59,6 +68,71 @@ document.addEventListener('DOMContentLoaded', async function() {
     showSetup();
     tokenInput.value = ''; // Clear the input for security
   });
+  
+  // Cache management functions
+  function getCachedData() {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+      
+      if (!cached || !timestamp) {
+        return null;
+      }
+      
+      return {
+        data: JSON.parse(cached),
+        timestamp: parseInt(timestamp)
+      };
+    } catch (error) {
+      console.error('Error reading cache:', error);
+      clearCache();
+      return null;
+    }
+  }
+  
+  function setCachedData(data) {
+    try {
+      const timestamp = Date.now();
+      localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(CACHE_TIMESTAMP_KEY, timestamp.toString());
+    } catch (error) {
+      console.error('Error setting cache:', error);
+      // If localStorage is full, clear it and try again
+      clearCache();
+      try {
+        const timestamp = Date.now();
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(CACHE_TIMESTAMP_KEY, timestamp.toString());
+      } catch (retryError) {
+        console.error('Error setting cache on retry:', retryError);
+      }
+    }
+  }
+  
+  function clearCache() {
+    try {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+    }
+  }
+  
+  async function loadRepositoriesWithCache(token, forceFresh = false) {
+    // If not forcing fresh data, try to load from cache first
+    if (!forceFresh) {
+      const cachedResult = getCachedData();
+      if (cachedResult) {
+        console.log('Loading repositories from cache');
+        displayRepositories(cachedResult.data, cachedResult.timestamp);
+        return;
+      }
+    }
+    
+    // If no cache or forcing fresh, fetch from API
+    console.log('Fetching repositories from GitHub API');
+    await loadRepositories(token);
+  }
   
   async function loadRepositories(token) {
     // Add loading state to refresh button
@@ -83,18 +157,28 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
       
       const repos = await response.json();
-      loading.style.display = 'none';
       
       if (repos.length === 0) {
+        loading.style.display = 'none';
         repoList.innerHTML = '<div style="text-align: center; padding: 20px; color: #586069;">No repositories found</div>';
         return;
       }
       
       // Fetch branch info for each repository
+      const reposWithBranches = [];
       for (const repo of repos) {
-        const repoItem = await createRepoItem(repo, token);
-        repoList.appendChild(repoItem);
+        const branches = await getTop3UpdatedBranches(repo, token);
+        reposWithBranches.push({
+          ...repo,
+          cachedBranches: branches
+        });
       }
+      
+      // Cache the processed data
+      setCachedData(reposWithBranches);
+      
+      // Display the repositories
+      displayRepositories(reposWithBranches, Date.now());
       
     } catch (err) {
       loading.style.display = 'none';
@@ -105,6 +189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (err.message.includes('401')) {
         await chrome.storage.local.remove(['githubToken']);
         currentToken = null;
+        clearCache(); // Clear cache for invalid token
         showSetup();
         error.textContent = 'Invalid token. Please enter a valid GitHub token.';
       }
@@ -113,6 +198,60 @@ document.addEventListener('DOMContentLoaded', async function() {
       refreshBtn.classList.remove('loading');
       refreshBtn.disabled = false;
     }
+  }
+  
+  function displayRepositories(reposWithBranches, timestamp) {
+    loading.style.display = 'none';
+    error.style.display = 'none';
+    repoList.innerHTML = '';
+    
+    for (const repo of reposWithBranches) {
+      const repoItem = createRepoItemFromCache(repo);
+      repoList.appendChild(repoItem);
+    }
+    
+    // Add cache status indicator
+    addCacheStatusIndicator(timestamp);
+  }
+  
+  function addCacheStatusIndicator(timestamp) {
+    const timeSinceUpdate = getTimeSinceUpdate(timestamp);
+    
+    const indicator = document.createElement('div');
+    indicator.style.cssText = `
+      text-align: center;
+      padding: 8px;
+      font-size: 11px;
+      color: #656d76;
+      background: #f6f8fa;
+      border-top: 1px solid #e1e4e8;
+      margin-top: 8px;
+    `;
+    
+    const isRecent = Date.now() - timestamp < 60000; // Less than 1 minute ago
+    const statusIcon = isRecent ? '🟢' : '📦';
+    const statusText = isRecent ? 'Just updated' : `Last updated ${timeSinceUpdate}`;
+    
+    indicator.innerHTML = `
+      ${statusIcon} ${statusText} • 
+      <span style="color: #0969da; cursor: pointer;" onclick="document.getElementById('refresh-btn').click()">
+        Refresh now
+      </span>
+    `;
+    
+    repoList.appendChild(indicator);
+  }
+  
+  function getTimeSinceUpdate(timestamp) {
+    const now = Date.now();
+    const diffInSeconds = Math.floor((now - timestamp) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minute${Math.floor(diffInSeconds / 60) === 1 ? '' : 's'} ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hour${Math.floor(diffInSeconds / 3600) === 1 ? '' : 's'} ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} day${Math.floor(diffInSeconds / 86400) === 1 ? '' : 's'} ago`;
+    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} month${Math.floor(diffInSeconds / 2592000) === 1 ? '' : 's'} ago`;
+    return `${Math.floor(diffInSeconds / 31536000)} year${Math.floor(diffInSeconds / 31536000) === 1 ? '' : 's'} ago`;
   }
   
   async function getTop3UpdatedBranches(repo, token) {
@@ -196,15 +335,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     return `${Math.floor(diffInSeconds / 31536000)}y ago`;
   }
   
-  async function createRepoItem(repo, token) {
+  function createRepoItemFromCache(repo) {
     const item = document.createElement('div');
     item.className = 'repo-item';
     item.style.cursor = 'default';
     item.style.padding = '12px';
     item.style.marginBottom = '8px';
     
-    // Get the top 3 updated branches
-    const topBranches = await getTop3UpdatedBranches(repo, token);
+    const topBranches = repo.cachedBranches || [];
     
     const branchesHtml = topBranches.map(branch => `
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-left: 3px solid ${branch.isDefault ? '#0969da' : '#656d76'}; padding-left: 8px; margin: 2px 0;">
