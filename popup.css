@@ -91,8 +91,13 @@ body {
   border-color: #0969da;
 }
 
-.setup-form button {
-  width: 100%;
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.primary-btn {
+  flex: 1;
   background: #0969da;
   color: white;
   border: none;
@@ -104,8 +109,25 @@ body {
   transition: background-color 0.2s;
 }
 
-.setup-form button:hover {
+.primary-btn:hover {
   background: #0860ca;
+}
+
+.secondary-btn {
+  flex: 1;
+  background: #f6f8fa;
+  color: #24292f;
+  border: 1px solid #d0d7de;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.secondary-btn:hover {
+  background: #f3f4f6;
 }
 
 .help-text {
@@ -126,22 +148,77 @@ body {
   margin: 4px 0;
 }
 
-#loading {
+/* Improved loading indicator styles */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 40px 20px;
-  color: #656d76;
+  justify-content: center;
+  z-index: 1000;
+  flex-direction: column;
+  padding: 20px;
 }
 
-.loading-spinner {
-  width: 24px;
-  height: 24px;
+.loading-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 24px;
+  width: 80%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
   border: 3px solid #f3f3f3;
   border-top: 3px solid #0969da;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 12px;
+  margin: 0 auto 16px;
+}
+
+.loading-status {
+  text-align: center;
+}
+
+.loading-status h4 {
+  margin: 0 0 8px;
+  color: #24292f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.loading-status p {
+  margin: 0 0 16px;
+  color: #57606a;
+  font-size: 14px;
+}
+
+.progress-bar {
+  height: 6px;
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-indicator {
+  height: 100%;
+  background-color: #0969da;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.loading-stats {
+  font-size: 12px;
+  color: #57606a;
 }
 
 .error-message {
@@ -189,4 +266,45 @@ body {
 
 #main-content.hidden {
   display: none;
+}
+
+/* Fix for the dark title bar readability */
+#user-profile h3 {
+  color: white !important;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Make commit container look clickable */
+.commit-container {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.commit-container:hover {
+  background: #f0f2f5 !important;
+  border-color: #0969da !important;
+}
+
+/* Icon button styles */
+.icon-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
 }
