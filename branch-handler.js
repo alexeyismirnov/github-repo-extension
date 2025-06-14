@@ -3,25 +3,51 @@ async function getSimplifiedBranchInfo(repo, token) {
     console.log(`Getting branch info for ${repo.name}`);
     const defaultBranch = repo.default_branch || 'main';
     
-    // Get the actual commit data
-    const branch = await getSingleBranchWithCommit(repo, defaultBranch, token, true);
+    // First, fetch all branches for the repository
+    const branchesUrl = `https://api.github.com/repos/${repo.full_name}/branches`;
+    console.log(`Fetching all branches from: ${branchesUrl}`);
     
-    if (branch && branch.commit && branch.commit.sha !== 'unknown') {
-      console.log(`Successfully got real commit for ${repo.name}:`, {
-        sha: branch.commit.sha.substring(0, 7),
-        message: branch.commit.message.split('\n')[0].substring(0, 50) + '...'
-      });
-      return [branch];
-    } else {
-      console.log(`Failed to get commit for ${repo.name}, no real commit data available`);
-      // Return branch info but mark as no commit data
+    const branchesResponse = await fetch(branchesUrl, {
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    
+    if (!branchesResponse.ok) {
+      console.error(`Failed to fetch branches: ${branchesResponse.status}`);
+      // Fall back to just the default branch if we can't get all branches
+      const branch = await getSingleBranchWithCommit(repo, defaultBranch, token, true);
+      return branch ? [branch] : [];
+    }
+    
+    const branches = await branchesResponse.json();
+    console.log(`Found ${branches.length} branches for ${repo.name}`);
+    
+    // Get commit data for each branch (limit to reasonable number to avoid API rate limits)
+    const maxBranches = 5; // Adjust this number as needed
+    const branchesToProcess = branches.slice(0, maxBranches);
+    
+    const branchesWithCommits = [];
+    for (const branchInfo of branchesToProcess) {
+      const isDefault = branchInfo.name === defaultBranch;
+      const branch = await getSingleBranchWithCommit(repo, branchInfo.name, token, isDefault);
+      if (branch) {
+        branchesWithCommits.push(branch);
+      }
+    }
+    
+    if (branchesWithCommits.length === 0) {
+      console.log(`No valid branches with commits found for ${repo.name}`);
       return [{
         name: defaultBranch,
         lastUpdate: repo.updated_at,
         isDefault: true,
-        commit: null // Explicitly null to indicate no commit data
+        commit: null
       }];
     }
+    
+    return branchesWithCommits;
     
   } catch (error) {
     console.error(`Error getting branch info for ${repo.name}:`, error);

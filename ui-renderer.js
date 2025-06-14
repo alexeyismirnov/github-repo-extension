@@ -1,4 +1,5 @@
-function displayRepositories(reposWithBranches, timestamp) {
+// Make displayRepositories available globally
+window.displayRepositories = function(reposWithBranches, timestamp) {
   const loading = document.getElementById('loading');
   const error = document.getElementById('error');
   const repoList = document.getElementById('repo-list');
@@ -13,7 +14,7 @@ function displayRepositories(reposWithBranches, timestamp) {
   }
   
   addCacheStatusIndicator(timestamp);
-}
+};
 
 function createRepoItem(repo) {
   const item = document.createElement('div');
@@ -29,46 +30,117 @@ function createRepoItem(repo) {
     transition: all 0.2s ease;
   `;
   
-  const branches = repo.cachedBranches || [];
-  const mainBranch = branches[0];
+  // Sort branches strictly by last update time (most recent first)
+  const branches = (repo.cachedBranches || []).sort((a, b) => {
+    return new Date(b.lastUpdate) - new Date(a.lastUpdate);
+  });
   
-  // Simple collapsed view - just repo name and basic branch info
-  const collapsedView = `
-    <div style="display: flex; align-items: center; justify-content: space-between;">
-      <div style="flex: 1;">
-        <div style="margin-bottom: 8px;">
-          <a href="${repo.html_url}" target="_blank" style="text-decoration: none; color: #0969da; font-weight: 600; font-size: 14px;" onclick="event.stopPropagation();">
-            ${repo.name}
-          </a>
+  // Generate branch preview elements for collapsed view
+  let branchPreviewsHtml = '';
+  
+  if (branches.length === 0) {
+    branchPreviewsHtml = `
+      <div style="padding: 4px 0; color: #656d76; font-style: italic;">
+        No branch information available
+      </div>
+    `;
+  } else {
+    // Generate HTML for each branch (limited to 3 in collapsed view)
+    branchPreviewsHtml = branches.slice(0, 3).map(branch => {
+      const isDefault = branch.isDefault;
+      const borderColor = isDefault ? '#0969da' : '#e1e4e8';
+      const nameColor = isDefault ? '#0969da' : '#24292f';
+      const nameWeight = isDefault ? '600' : '500';
+      const defaultLabel = isDefault ? ' (default)' : '';
+      
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-left: 3px solid ${borderColor}; padding-left: 8px; margin-bottom: 4px;">
+          <span style="font-weight: ${nameWeight}; color: ${nameColor};">
+            ${branch.name}${defaultLabel}
+          </span>
+          <span style="font-size: 12px; color: #656d76;">
+            ${formatRelativeTime(branch.lastUpdate)}
+          </span>
         </div>
-        ${mainBranch ? `
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-left: 3px solid #0969da; padding-left: 8px;">
-            <span style="font-weight: 500; color: #0969da;">
-              ${mainBranch.name} (default)
-            </span>
-            <span style="font-size: 12px; color: #656d76;">
-              ${formatRelativeTime(mainBranch.lastUpdate)}
-            </span>
-          </div>
-        ` : ''}
-      </div>
-      <div class="expand-icon" style="margin-left: 8px; transition: transform 0.2s ease; color: #656d76;">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"></path>
-        </svg>
-      </div>
-    </div>
+      `;
+    }).join('');
+    
+    // Add indicator if there are more branches
+    if (branches.length > 3) {
+      branchPreviewsHtml += `
+        <div style="font-size: 12px; color: #656d76; text-align: right; padding: 2px 0;">
+          +${branches.length - 3} more branches
+        </div>
+      `;
+    }
+  }
+  
+  // Create repo link element
+  const repoLink = document.createElement('a');
+  repoLink.href = repo.html_url;
+  repoLink.target = "_blank";
+  repoLink.style.cssText = "text-decoration: none; color: #0969da; font-weight: 600; font-size: 14px;";
+  repoLink.textContent = repo.name;
+  
+  // Create repo title div
+  const repoTitleDiv = document.createElement('div');
+  repoTitleDiv.style.marginBottom = repo.homepage ? '4px' : '8px';
+  repoTitleDiv.appendChild(repoLink);
+  
+  // Create homepage link if it exists
+  let homepageDiv = null;
+  if (repo.homepage) {
+    homepageDiv = document.createElement('div');
+    homepageDiv.style.cssText = "margin-bottom: 8px; font-size: 12px; color: #57606a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+    
+    const homepageLink = document.createElement('a');
+    homepageLink.href = repo.homepage;
+    homepageLink.target = "_blank";
+    homepageLink.style.cssText = "text-decoration: none; color: #57606a;";
+    homepageLink.textContent = repo.homepage;
+    
+    homepageDiv.appendChild(homepageLink);
+  }
+  
+  // Create branch previews div
+  const branchPreviewsDiv = document.createElement('div');
+  branchPreviewsDiv.className = "branch-previews";
+  branchPreviewsDiv.innerHTML = branchPreviewsHtml;
+  
+  // Create left column div
+  const leftColDiv = document.createElement('div');
+  leftColDiv.style.flex = "1";
+  leftColDiv.appendChild(repoTitleDiv);
+  if (homepageDiv) {
+    leftColDiv.appendChild(homepageDiv);
+  }
+  leftColDiv.appendChild(branchPreviewsDiv);
+  
+  // Create expand icon
+  const expandIconDiv = document.createElement('div');
+  expandIconDiv.className = "expand-icon";
+  expandIconDiv.style.cssText = "margin-left: 8px; transition: transform 0.2s ease; color: #656d76;";
+  expandIconDiv.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"></path>
+    </svg>
   `;
   
-  // Expanded view with commit details - NO duplicate branch name
-  const expandedView = createExpandedView(branches, repo);
+  // Create collapsed view container
+  const collapsedViewDiv = document.createElement('div');
+  collapsedViewDiv.style.cssText = "display: flex; align-items: flex-start; justify-content: space-between;";
+  collapsedViewDiv.appendChild(leftColDiv);
+  collapsedViewDiv.appendChild(expandIconDiv);
   
-  item.innerHTML = `
-    ${collapsedView}
-    <div class="expanded-content" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e1e4e8;">
-      ${expandedView}
-    </div>
-  `;
+  // Create expanded content div
+  const expandedContentDiv = document.createElement('div');
+  expandedContentDiv.className = "expanded-content";
+  expandedContentDiv.style.cssText = "display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e1e4e8;";
+  expandedContentDiv.innerHTML = createExpandedView(branches, repo);
+  
+  // Add elements to the main item
+  item.appendChild(collapsedViewDiv);
+  item.appendChild(expandedContentDiv);
   
   // Add click handler for expansion
   item.addEventListener('click', function() {
@@ -87,6 +159,18 @@ function createRepoItem(repo) {
       this.style.background = '#ffffff';
     }
   });
+  
+  // Prevent repo link and homepage link from triggering expansion
+  repoLink.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+  
+  if (homepageDiv) {
+    const homepageLink = homepageDiv.querySelector('a');
+    homepageLink.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  }
   
   // After rendering, add click handlers to commit elements
   setTimeout(() => {
@@ -129,11 +213,18 @@ function createExpandedView(branches, repo) {
     return '<div style="color: #656d76; font-style: italic;">No branch information available</div>';
   }
   
+  // Add branch name header to each commit section
   return branches.map(branch => {
     // Check if we have actual commit data
     if (!branch.commit) {
       return `
-        <div style="padding-left: 12px;">
+        <div style="padding-left: 12px; margin-bottom: 12px;">
+          <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center;">
+            <svg style="margin-right: 4px;" width="16" height="16" viewBox="0 0 16 16" fill="#57606a">
+              <path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z"></path>
+            </svg>
+            ${branch.name} ${branch.isDefault ? '<span style="font-size: 12px; color: #0969da; background: #ddf4ff; padding: 1px 5px; border-radius: 10px; margin-left: 5px;">default</span>' : ''}
+          </div>
           <div style="background: #fff8dc; border: 1px solid #f1c40f; border-radius: 4px; padding: 8px;">
             <div style="font-size: 13px; color: #856404;">
               ⚠️ No commit information available
@@ -150,9 +241,14 @@ function createExpandedView(branches, repo) {
     const truncatedMessage = commitMessage.length > 60 ? commitMessage.substring(0, 57) + '...' : commitMessage;
     
     return `
-      <div style="padding-left: 12px;">
-        <div class="commit-container" data-commit-url="${branch.commit.html_url}" style="background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 4px; padding: 8px; cursor: pointer;" 
-             onclick="window.open('${branch.commit.html_url}', '_blank'); event.stopPropagation();">
+      <div style="padding-left: 12px; margin-bottom: 16px;">
+        <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center;">
+          <svg style="margin-right: 4px;" width="16" height="16" viewBox="0 0 16 16" fill="#57606a">
+            <path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z"></path>
+          </svg>
+          ${branch.name} ${branch.isDefault ? '<span style="font-size: 12px; color: #0969da; background: #ddf4ff; padding: 1px 5px; border-radius: 10px; margin-left: 5px;">default</span>' : ''}
+        </div>
+        <div class="commit-container" data-commit-url="${branch.commit.html_url}" style="background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 4px; padding: 8px; cursor: pointer;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
             ${branch.commit.author.avatar_url ? 
               `<img src="${branch.commit.author.avatar_url}" alt="${branch.commit.author.name}" style="width: 16px; height: 16px; border-radius: 50%;">` : 
@@ -213,26 +309,26 @@ function toggleRepoExpansion(repoId) {
       commitContainers.forEach(container => {
         const commitUrl = container.getAttribute('data-commit-url');
         if (commitUrl) {
-          container.onclick = function(e) {
+          container.addEventListener('click', function(e) {
             window.open(commitUrl, '_blank');
             e.stopPropagation();
-          };
+          });
           
           const commitMessage = container.querySelector('.commit-message');
           const commitHash = container.querySelector('.commit-hash');
           
           if (commitMessage) {
-            commitMessage.onclick = function(e) {
+            commitMessage.addEventListener('click', function(e) {
               window.open(commitUrl, '_blank');
               e.stopPropagation();
-            };
+            });
           }
           
           if (commitHash) {
-            commitHash.onclick = function(e) {
+            commitHash.addEventListener('click', function(e) {
               window.open(commitUrl, '_blank');
               e.stopPropagation();
-            };
+            });
           }
         }
       });
@@ -260,28 +356,46 @@ function addCacheStatusIndicator(timestamp) {
   const statusText = isRecent ? 'Just updated' : `Last updated ${timeSinceUpdate}`;
   
   // Create the indicator content with a span for "Refresh now"
-  indicator.innerHTML = `
-    ${statusIcon} ${statusText} • 
-    <span id="refresh-now-link" style="color: #0969da; cursor: pointer;">
-      Refresh now
-    </span>
-  `;
+  const statusSpan = document.createElement('span');
+  statusSpan.textContent = `${statusIcon} ${statusText} • `;
+  
+  const refreshLink = document.createElement('span');
+  refreshLink.id = 'refresh-now-link';
+  refreshLink.style.cssText = 'color: #0969da; cursor: pointer;';
+  refreshLink.textContent = 'Refresh now';
+  
+  // Add elements to indicator
+  indicator.appendChild(statusSpan);
+  indicator.appendChild(refreshLink);
   
   // Append the indicator to the repo list
   repoList.appendChild(indicator);
   
   // Add event listener to the "Refresh now" link after it's added to the DOM
-  const refreshNowLink = document.getElementById('refresh-now-link');
-  if (refreshNowLink) {
-    refreshNowLink.addEventListener('click', function(e) {
-      // Find and click the refresh button
-      const refreshBtn = document.getElementById('refresh-btn');
-      if (refreshBtn) {
-        refreshBtn.click();
+  refreshLink.addEventListener('click', function(e) {
+    e.stopPropagation();
+    
+    // DIRECT APPROACH: Get the token and call loadUserAndRepositories directly
+    if (window.githubPopup && typeof window.githubPopup.currentToken === 'function') {
+      const token = window.githubPopup.currentToken();
+      if (token && typeof window.githubPopup.loadUserAndRepositories === 'function') {
+        window.githubPopup.loadUserAndRepositories(token, true);
+        return;
       }
-      e.stopPropagation();
-    });
-  }
+    }
+    
+    // Fallback to the global forceRefresh function
+    if (typeof window.forceRefresh === 'function') {
+      window.forceRefresh();
+      return;
+    }
+    
+    // Last resort: try clicking the refresh button
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.click();
+    }
+  });
 }
 
 function getTimeSinceUpdate(timestamp) {
@@ -293,3 +407,11 @@ function getTimeSinceUpdate(timestamp) {
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hour${Math.floor(diffInSeconds / 3600) === 1 ? '' : 's'} ago`;
   return `${Math.floor(diffInSeconds / 86400)} day${Math.floor(diffInSeconds / 86400) === 1 ? '' : 's'} ago`;
 }
+
+// Check for cached data that might have been set before this script loaded
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.cachedRepoData) {
+    window.displayRepositories(window.cachedRepoData.data, window.cachedRepoData.timestamp);
+    window.cachedRepoData = null; // Clear it after use
+  }
+});

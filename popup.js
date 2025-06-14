@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   const setupSection = document.getElementById('setup-section');
   const mainContent = document.getElementById('main-content');
   const tokenInput = document.getElementById('token-input');
+  const reposToLoadInput = document.getElementById('repos-to-load');
   const saveTokenBtn = document.getElementById('save-token');
   const cancelBtn = document.getElementById('cancel-btn');
   const refreshBtn = document.getElementById('refresh-btn');
@@ -40,6 +41,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
       tokenInput.placeholder = 'Enter your GitHub Personal Access Token';
     }
+    
+    // Load current settings for the form
+    const settings = getSettings();
+    reposToLoadInput.value = settings.reposToLoad;
   }
   
   function showMain() {
@@ -50,6 +55,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Event Listeners
   saveTokenBtn.addEventListener('click', async function() {
     const token = tokenInput.value.trim();
+    const reposToLoad = parseInt(reposToLoadInput.value) || 10;
+    
+    // Save settings
+    updateSettings({ reposToLoad: reposToLoad });
+    
     if (token) {
       await chrome.storage.local.set({ githubToken: token });
       currentToken = token;
@@ -57,6 +67,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       clearUserCache();
       showMain();
       await loadUserAndRepositories(token, true);
+    } else if (currentToken) {
+      // If no new token but we have a current token, just update settings
+      showMain();
+      await loadUserAndRepositories(currentToken, true);
     }
   });
   
@@ -78,6 +92,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
   
   tokenInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      saveTokenBtn.click();
+    }
+  });
+  
+  reposToLoadInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       saveTokenBtn.click();
     }

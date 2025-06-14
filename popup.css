@@ -91,6 +91,59 @@ body {
   border-color: #0969da;
 }
 
+/* New settings section styles */
+.settings-section {
+  margin: 20px 0;
+  padding: 0;
+}
+
+.settings-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: #24292f;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.setting-item label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #24292f;
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+}
+
+.setting-control input[type="number"] {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+}
+
+.setting-control input[type="number"]:focus {
+  outline: none;
+  border-color: #0969da;
+}
+
+/* Remove spinner arrows from number input */
+.setting-control input[type="number"]::-webkit-inner-spin-button,
+.setting-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .button-group {
   display: flex;
   gap: 8px;

@@ -10,14 +10,28 @@
   <!-- Setup Section -->
   <div id="setup-section" style="display: none;">
     <div class="header">
-      <h2>GitHub Repository Monitor</h2>
-      <p>Enter your GitHub Personal Access Token to get started</p>
+      <div>
+        <h2>GitHub Repository Monitor</h2>
+        <p>Enter your GitHub Personal Access Token to get started</p>
+      </div>
     </div>
     
     <div class="setup-form">
       <input type="password" id="token-input" placeholder="Enter your GitHub Personal Access Token" />
+      
+      <!-- Improved settings section -->
+      <div class="settings-section">
+        
+        <div class="setting-item">
+          <label for="repos-to-load">Number of repos to show:</label>
+          <div class="setting-control">
+            <input type="number" id="repos-to-load" min="1" max="100" value="10" />
+          </div>
+        </div>
+      </div>
+      
       <div class="button-group">
-        <button id="save-token" class="primary-btn">Save Token</button>
+        <button id="save-token" class="primary-btn">Save</button>
         <button id="cancel-btn" class="secondary-btn">Cancel</button>
       </div>
     </div>

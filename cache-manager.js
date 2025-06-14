@@ -2,6 +2,12 @@
 const CACHE_KEY = 'github_repos_cache';
 const CACHE_TIMESTAMP_KEY = 'github_repos_cache_timestamp';
 const USER_CACHE_KEY = 'github_user_cache';
+const SETTINGS_KEY = 'github_extension_settings';
+
+// Default settings
+const DEFAULT_SETTINGS = {
+  reposToLoad: 10
+};
 
 function getCachedData() {
   try {
@@ -74,5 +80,29 @@ function clearUserCache() {
     localStorage.removeItem(USER_CACHE_KEY);
   } catch (error) {
     console.error('Error clearing user cache:', error);
+  }
+}
+
+// New functions for settings management
+function getSettings() {
+  try {
+    const settings = localStorage.getItem(SETTINGS_KEY);
+    return settings ? JSON.parse(settings) : DEFAULT_SETTINGS;
+  } catch (error) {
+    console.error('Error reading settings:', error);
+    return DEFAULT_SETTINGS;
+  }
+}
+
+function updateSettings(newSettings) {
+  try {
+    // Get current settings and merge with new settings
+    const currentSettings = getSettings();
+    const updatedSettings = { ...currentSettings, ...newSettings };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(updatedSettings));
+    return updatedSettings;
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    return DEFAULT_SETTINGS;
   }
 }

@@ -1,4 +1,7 @@
 async function loadUserAndRepositories(token, forceFresh = false) {
+  // Reset UI state before loading
+  resetUIState();
+  
   // Update loading status
   updateLoadingStatus("Loading user profile", "Connecting to GitHub API", 0, 2);
   await loadUserInfo(token, forceFresh);
@@ -72,7 +75,16 @@ async function loadRepositoriesWithCache(token, forceFresh = false) {
     const cachedResult = getCachedData();
     if (cachedResult) {
       updateLoadingStatus("Loading repositories", "Using cached repository data", 1, 1);
-      displayRepositories(cachedResult.data, cachedResult.timestamp);
+      // Check if displayRepositories is available, if not, wait for it
+      if (typeof window.displayRepositories === 'function') {
+        window.displayRepositories(cachedResult.data, cachedResult.timestamp);
+      } else {
+        // Store data for later use when ui-renderer.js loads
+        window.cachedRepoData = {
+          data: cachedResult.data,
+          timestamp: cachedResult.timestamp
+        };
+      }
       return;
     }
   }
@@ -94,9 +106,13 @@ async function loadRepositories(token) {
   repoList.innerHTML = '';
   
   try {
-    updateLoadingStatus("Loading repositories", "Connecting to GitHub API", 0, 100);
+    // Get the configured number of repositories to load
+    const settings = getSettings();
+    const reposToLoad = settings.reposToLoad || 10;
     
-    const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=10', {
+    updateLoadingStatus("Loading repositories", `Connecting to GitHub API (fetching ${reposToLoad} repositories)`, 0, 100);
+    
+    const response = await fetch(`https://api.github.com/user/repos?sort=updated&per_page=${reposToLoad}`, {
       headers: {
         'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json'
@@ -108,7 +124,7 @@ async function loadRepositories(token) {
     }
     
     const repos = await response.json();
-    updateLoadingStatus("Processing repositories", "Repository list retrieved", 10, 100);
+    updateLoadingStatus("Processing repositories", `Repository list retrieved (${repos.length} repositories)`, 10, 100);
     
     if (repos.length === 0) {
       loading.style.display = 'none';
@@ -148,7 +164,17 @@ async function loadRepositories(token) {
     updateLoadingStatus("Finalizing", "Rendering repository data", totalRepos, totalRepos);
     
     setCachedData(reposWithBranches);
-    displayRepositories(reposWithBranches, Date.now());
+    
+    // Check if displayRepositories is available, if not, wait for it
+    if (typeof window.displayRepositories === 'function') {
+      window.displayRepositories(reposWithBranches, Date.now());
+    } else {
+      // Store data for later use when ui-renderer.js loads
+      window.cachedRepoData = {
+        data: reposWithBranches,
+        timestamp: Date.now()
+      };
+    }
     
   } catch (err) {
     loading.style.display = 'none';
@@ -159,7 +185,6 @@ async function loadRepositories(token) {
       await chrome.storage.local.remove(['githubToken']);
       clearCache();
       clearUserCache();
-      showSetup();
       error.textContent = 'Invalid token. Please enter a valid GitHub token.';
     }
   } finally {
@@ -188,3 +213,28 @@ function updateLoadingStatus(title, detail, current, total) {
   if (loadedCount) loadedCount.textContent = current;
   if (totalCount) totalCount.textContent = total;
 }
+
+function resetUIState() {
+  // Reset any expanded repositories
+  if (window.githubPopup?.expandedRepos) {
+    window.githubPopup.expandedRepos.clear();
+  }
+  
+  // Clear the repository list to ensure a fresh start
+  const repoList = document.getElementById('repo-list');
+  if (repoList) {
+    repoList.innerHTML = '';
+  }
+}
+
+// Add this function at the end of the file
+function forceRefresh() {
+  // Get the token and force a fresh reload
+  const token = window.githubPopup?.currentToken?.();
+  if (token) {
+    loadUserAndRepositories(token, true);
+  }
+}
+
+// Make it available globally
+window.forceRefresh = forceRefresh;
