@@ -55,26 +55,3 @@ The GitHub Repository Manager is a browser extension that provides quick access 
     *   Click on a repository's name to open its main page on GitHub in a new tab.
     *   Click on a commit message or hash in the expanded view to open that specific commit on GitHub in a new tab.
     *   Click on your username or avatar in the header to open your GitHub profile page in a new tab.
-
-## Technologies Used
-
-*   **HTML:** For the structure of the extension popup.
-*   **CSS:** For styling the user interface.
-*   **JavaScript:** For the core logic, API interactions, and dynamic content rendering.
-*   **GitHub API (v3):** To fetch repository and user data.
-*   **Web Extensions API:** Standard browser APIs for extension development (e.g., `chrome.storage`).
-
-## File Structure
-
-Here's a brief overview of the key files in this project:
-
-*   **`manifest.json`**: The manifest file that defines the extension's properties, permissions, and entry points.
-*   **`popup.html`**: The HTML structure for the extension's popup interface.
-*   **`popup.css`**: Contains the styles for the `popup.html` interface.
-*   **`popup.js`**: The main JavaScript file that controls the popup's behavior, user interactions, and coordinates with other modules.
-*   **`api-handler.js`**: Handles all communication with the GitHub API, including fetching user and repository data.
-*   **`branch-handler.js`**: Responsible for fetching and processing detailed branch and commit information for repositories.
-*   **`cache-manager.js`**: Manages caching of data (repositories, user info) in `localStorage` to improve performance and reduce API calls.
-*   **`ui-renderer.js`**: Contains functions to render the repository list and individual repository items in the UI.
-*   **`icons/`**: (Directory) Contains the icons used for the extension (e.g., browser toolbar icon, favicon).
-*   **`.gitignore`**: Specifies intentionally untracked files that Git should ignore.
