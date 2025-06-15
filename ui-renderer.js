@@ -53,13 +53,16 @@ function createRepoItem(repo) {
       const nameWeight = isDefault ? '600' : '500';
       const defaultLabel = isDefault ? ' (default)' : '';
       
+      // FIX 2: Ensure last update time is always displayed for all branches
+      const lastUpdateTime = branch.lastUpdate ? formatRelativeTime(branch.lastUpdate) : "unknown";
+      
       return `
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-left: 3px solid ${borderColor}; padding-left: 8px; margin-bottom: 4px;">
-          <span style="font-weight: ${nameWeight}; color: ${nameColor};">
+          <span style="font-weight: ${nameWeight}; color: ${nameColor}; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             ${branch.name}${defaultLabel}
           </span>
-          <span style="font-size: 12px; color: #656d76;">
-            ${formatRelativeTime(branch.lastUpdate)}
+          <span style="font-size: 12px; color: #656d76; flex-shrink: 0;">
+            ${lastUpdateTime}
           </span>
         </div>
       `;
@@ -91,13 +94,15 @@ function createRepoItem(repo) {
   let homepageDiv = null;
   if (repo.homepage) {
     homepageDiv = document.createElement('div');
-    homepageDiv.style.cssText = "margin-bottom: 8px; font-size: 12px; color: #57606a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+    // FIX 1: Improve the homepage URL container to handle long URLs
+    homepageDiv.style.cssText = "margin-bottom: 8px; font-size: 12px; color: #57606a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block;";
     
     const homepageLink = document.createElement('a');
     homepageLink.href = repo.homepage;
     homepageLink.target = "_blank";
-    homepageLink.style.cssText = "text-decoration: none; color: #57606a;";
+    homepageLink.style.cssText = "text-decoration: none; color: #57606a; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
     homepageLink.textContent = repo.homepage;
+    homepageLink.title = repo.homepage; // Add tooltip showing the full URL on hover
     
     homepageDiv.appendChild(homepageLink);
   }
@@ -110,6 +115,8 @@ function createRepoItem(repo) {
   // Create left column div
   const leftColDiv = document.createElement('div');
   leftColDiv.style.flex = "1";
+  leftColDiv.style.minWidth = "0"; // FIX 1: Add this to ensure flex items can shrink below content size
+  leftColDiv.style.overflow = "hidden"; // FIX 1: Ensure content doesn't overflow
   leftColDiv.appendChild(repoTitleDiv);
   if (homepageDiv) {
     leftColDiv.appendChild(homepageDiv);
@@ -119,7 +126,7 @@ function createRepoItem(repo) {
   // Create expand icon
   const expandIconDiv = document.createElement('div');
   expandIconDiv.className = "expand-icon";
-  expandIconDiv.style.cssText = "margin-left: 8px; transition: transform 0.2s ease; color: #656d76;";
+  expandIconDiv.style.cssText = "margin-left: 8px; transition: transform 0.2s ease; color: #656d76; flex-shrink: 0;"; // Added flex-shrink: 0 to prevent icon from shrinking
   expandIconDiv.innerHTML = `
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
       <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"></path>
@@ -128,7 +135,7 @@ function createRepoItem(repo) {
   
   // Create collapsed view container
   const collapsedViewDiv = document.createElement('div');
-  collapsedViewDiv.style.cssText = "display: flex; align-items: flex-start; justify-content: space-between;";
+  collapsedViewDiv.style.cssText = "display: flex; align-items: flex-start; justify-content: space-between; width: 100%;"; // Added width: 100%
   collapsedViewDiv.appendChild(leftColDiv);
   collapsedViewDiv.appendChild(expandIconDiv);
   
@@ -240,6 +247,9 @@ function createExpandedView(branches, repo) {
     const commitMessage = branch.commit.message.split('\n')[0];
     const truncatedMessage = commitMessage.length > 60 ? commitMessage.substring(0, 57) + '...' : commitMessage;
     
+    // FIX 2: Ensure commit date is always displayed
+    const commitDate = branch.commit.date ? formatRelativeTime(branch.commit.date) : formatRelativeTime(branch.lastUpdate);
+    
     return `
       <div style="padding-left: 12px; margin-bottom: 16px;">
         <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center;">
@@ -258,7 +268,7 @@ function createExpandedView(branches, repo) {
               ${branch.commit.author.name}
             </span>
             <span style="font-size: 11px; color: #656d76;">
-              ${formatRelativeTime(branch.commit.date)}
+              ${commitDate}
             </span>
           </div>
           <div class="commit-message" style="font-size: 13px; color: #24292f; margin-bottom: 6px; font-weight: 500; cursor: pointer;">

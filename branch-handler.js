@@ -25,7 +25,7 @@ async function getSimplifiedBranchInfo(repo, token) {
     console.log(`Found ${branches.length} branches for ${repo.name}`);
     
     // Get commit data for each branch (limit to reasonable number to avoid API rate limits)
-    const maxBranches = 5; // Adjust this number as needed
+    const maxBranches = 10; // Adjust this number as needed
     const branchesToProcess = branches.slice(0, maxBranches);
     
     const branchesWithCommits = [];
