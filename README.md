@@ -30,4 +30,4 @@ The GitHub Repository Manager is a browser extension that provides quick access 
         5.  Select the `repo` scope. This scope grants access to your repositories, which is necessary for the extension to function.
         6.  Click "Generate token".
         7.  Copy the generated token. **Important:** GitHub will only show you this token once. Make sure to copy it before closing the page.
-        8.  Paste this token into the extension's setup screen and click "Save Token".
+        8.  Paste this token into the extension's setup screen and click "Save".
