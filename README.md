@@ -17,21 +17,10 @@ The GitHub Repository Manager is a browser extension that provides quick access 
 
 ## Setup and Installation
 
-1.  **Download or Clone:**
-    *   Download the repository files as a ZIP and extract them, or clone the repository to your local machine.
+1.  **Install from Chrome Web Store:**
+    *   This extension is available on the Chrome Web Store. Install it from [this link](https://chromewebstore.google.com/detail/github-repository-manager/ephjfdfkiifeelejjcfagmjkmbjellpg).
 
-2.  **Load the Extension in Your Browser:**
-    *   **Chrome/Edge:**
-        1.  Open your browser and navigate to `chrome://extensions` (for Chrome) or `edge://extensions` (for Edge).
-        2.  Enable "Developer mode" (usually a toggle switch in the top right corner).
-        3.  Click on "Load unpacked".
-        4.  Select the directory where you extracted/cloned the extension files.
-    *   **Firefox:**
-        1.  Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
-        2.  Click on "Load Temporary Add-on...".
-        3.  Select the `manifest.json` file from the extension's directory. (Note: Temporary loading means it will be removed when Firefox is closed unless you package and sign it.)
-
-3.  **Configure GitHub Personal Access Token:**
+2.  **Configure GitHub Personal Access Token:**
     *   Upon first launch, the extension will prompt you to enter a GitHub Personal Access Token.
     *   **How to get a GitHub token:**
         1.  Go to your GitHub Settings page.
